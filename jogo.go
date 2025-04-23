@@ -16,6 +16,7 @@ type Elemento struct {
 type InimigoMovel struct {
 	X, Y     int
 	Direita  bool
+	Ativo    bool
 }
 
 type Tiro struct {
@@ -63,9 +64,9 @@ func jogoCarregarMapa(nome string, jogo *Jogo) error {
 				e = Parede
 			case Inimigo.simbolo:
 				jogo.Inimigos = append(jogo.Inimigos, InimigoMovel{
-					X: x, Y: y, Direita: true,
+					X: x, Y: y, Direita: true, Ativo: true, // Ativo inicializado como true
 				})
-				e = Vazio
+				e = Vazio			
 			case Vegetacao.simbolo:
 				e = Vegetacao
 			case Personagem.simbolo:
@@ -103,7 +104,25 @@ func jogoMoverElemento(jogo *Jogo, x, y, dx, dy int) {
 	jogo.Mapa[ny][nx] = elemento
 }
 
+func removerInimigoNaPosicao(jogo *Jogo, x, y int) {
+	for i := 0; i < len(jogo.Inimigos); i++ {
+		if jogo.Inimigos[i].X == x && jogo.Inimigos[i].Y == y {
+			jogo.Inimigos = append(jogo.Inimigos[:i], jogo.Inimigos[i+1:]...)
+			break
+		}
+	}
+	jogo.Mapa[y][x] = Vazio
+}
+
 func moverInimigo(inimigo *InimigoMovel, jogo *Jogo) {
+	if !inimigo.Ativo {
+		// Garante que a posição no mapa seja esvaziada caso o inimigo tenha sido desativado
+		if jogo.Mapa[inimigo.Y][inimigo.X].simbolo == Inimigo.simbolo {
+			jogo.Mapa[inimigo.Y][inimigo.X] = Vazio
+		}
+		return
+	}
+
 	dx := 1
 	if !inimigo.Direita {
 		dx = -1
@@ -127,22 +146,42 @@ func moverInimigo(inimigo *InimigoMovel, jogo *Jogo) {
 	inimigo.Y = ny
 }
 
+
 func atirar(jogo *Jogo) {
 	tiro := Tiro{X: jogo.PosX, Y: jogo.PosY - 1}
 	jogo.Tiros = append(jogo.Tiros, tiro)
+
 	go func() {
 		for {
 			if tiro.Y < 0 || tiro.Y >= len(jogo.Mapa) {
 				return
 			}
+
+			// Verifica colisão com inimigo
+			for i := range jogo.Inimigos {
+				if jogo.Inimigos[i].X == tiro.X && jogo.Inimigos[i].Y == tiro.Y && jogo.Inimigos[i].Ativo {
+					jogo.Inimigos[i].Ativo = false
+					jogo.Mapa[tiro.Y][tiro.X] = Vazio // Remover do mapa imediatamente
+					interfaceDesenharJogo(jogo)
+					verificarVitoria(jogo)
+					return
+				}
+			}
+
 			if jogo.Mapa[tiro.Y][tiro.X].tangivel {
 				return
 			}
+
 			jogo.Mapa[tiro.Y][tiro.X] = Projeteis
 			interfaceDesenharJogo(jogo)
 			time.Sleep(100 * time.Millisecond)
+
 			jogo.Mapa[tiro.Y][tiro.X] = Vazio
 			tiro.Y--
+
+			if tiro.Y < 0 {
+				return
+			}
 		}
 	}()
 }

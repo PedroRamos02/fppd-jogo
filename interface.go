@@ -7,6 +7,7 @@ package main
 
 import (
 	"github.com/nsf/termbox-go"
+	"os"
 )
 
 // Define um tipo Cor para encapsuladar as cores do termbox
@@ -98,6 +99,30 @@ func interfaceDesenharElemento(x, y int, elem Elemento) {
 	termbox.SetCell(x, y, elem.simbolo, elem.cor, elem.corFundo)
 }
 
+func verificarVitoria(jogo *Jogo) {
+	for _, inimigo := range jogo.Inimigos {
+		if inimigo.Ativo {
+			return // Ainda há inimigos ativos
+		}
+	}
+
+	interfaceLimparTela()
+	interfaceDesenharVitoria()
+	os.Exit(0) // Finaliza o programa
+}
+
+func interfaceDesenharVitoria() {
+	println()
+	println("██      ██  ██████   ██████  ██████      ██      ██ ███████ ███    ██  ██████  ███████  ██    ██ ")
+	println(" ██    ██  ██    ██ ██       ██           ██    ██  ██      ████   ██ ██       ██       ██    ██ ")
+	println("  ██  ██   ██    ██ ██       █████         ██  ██   █████   ██ ██  ██ ██       █████    ██    ██ ")
+	println("   █  █    ██    ██ ██       ██             █  █    ██      ██  ██ ██ ██       ██       ██    ██ ")
+	println("    ██      ██████   ██████  ██████          ██     ███████ ██   ████  ██████  ███████   ██████  ")
+	println()
+	println("                       Parabéns! Todos os inimigos foram derrotados.                             ")
+}
+
+
 // Exibe uma barra de status com informações úteis ao jogador
 func interfaceDesenharBarraDeStatus(jogo *Jogo) {
 	// Linha de status dinâmica
@@ -106,7 +131,7 @@ func interfaceDesenharBarraDeStatus(jogo *Jogo) {
 	}
 
 	// Instruções fixas
-	msg := "Use WASD para mover e E para interagir. ESC para sair."
+	msg := "Use WASD para mover e Enter para disparar. ESC para sair."
 	for i, c := range msg {
 		termbox.SetCell(i, len(jogo.Mapa)+3, c, CorTexto, CorPadrao)
 	}

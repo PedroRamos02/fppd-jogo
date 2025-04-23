@@ -46,3 +46,4 @@ func main() {
 		interfaceDesenharJogo(&jogo)
 	}
 }
+
