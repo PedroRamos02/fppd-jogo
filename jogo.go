@@ -185,3 +185,4 @@ func atirar(jogo *Jogo) {
 		}
 	}()
 }
+

@@ -6,9 +6,12 @@
 package main
 
 import (
-	"github.com/nsf/termbox-go"
+	"fmt"
 	"os"
+	"time"
+	"github.com/nsf/termbox-go"
 )
+
 
 // Define um tipo Cor para encapsuladar as cores do termbox
 type Cor = termbox.Attribute
@@ -22,6 +25,7 @@ const (
 	CorParede         = termbox.ColorBlack | termbox.AttrBold | termbox.AttrDim
 	CorFundoParede    = termbox.ColorDarkGray
 	CorTexto          = termbox.ColorDarkGray
+	CorBranco = termbox.ColorWhite
 )
 
 // EventoTeclado representa uma ação detectada do teclado (como mover, sair ou interagir)
@@ -63,6 +67,8 @@ func interfaceLerEventoTeclado() EventoTeclado {
 // Renderiza todo o estado atual do jogo na tela
 func interfaceDesenharJogo(jogo *Jogo) {
 	interfaceLimparTela()
+	interfaceDesenharTexto(0, len(jogo.Mapa)+1, fmt.Sprintf("⏱ Tempo restante: %ds", tempoRestante), CorBranco, CorPadrao)
+
 
 	// Desenha todos os elementos do mapa
 	for y, linha := range jogo.Mapa {
@@ -134,6 +140,39 @@ func interfaceDesenharBarraDeStatus(jogo *Jogo) {
 	msg := "Use WASD para mover e Enter para disparar. ESC para sair."
 	for i, c := range msg {
 		termbox.SetCell(i, len(jogo.Mapa)+3, c, CorTexto, CorPadrao)
+	}
+}
+
+var tempoRestante = 60
+
+func iniciarTimerVisual(jogo *Jogo) {
+	go func() {
+		for tempoRestante >= 0 {
+			interfaceDesenharJogo(jogo) // redesenha tudo com tempo
+			time.Sleep(1 * time.Second)
+			tempoRestante--
+
+			if tempoRestante < 0 {
+				interfaceLimparTela()
+				fmt.Println(`
+   _____                        ____                 
+  / ____|                      / __ \                
+ | |  __  __ _ _ __ ___   ___ | |  | |_   _____ _ __ 
+ | | |_ |/ _` + "`" + ` | '_ ` + "`" + ` _ \ / _ \| |  | \ \ / / _ \ '__|
+ | |__| | (_| | | | | | | (_) | |__| |\ V /  __/ |   
+  \_____|\__,_|_| |_| |_|\___/ \____/  \_/ \___|_|   
+
+                 TEMPO ESGOTADO!
+`)
+				os.Exit(0)
+			}
+		}
+	}()
+}
+
+func interfaceDesenharTexto(x, y int, texto string, corTexto, corFundo Cor) {
+	for i, c := range texto {
+		termbox.SetCell(x+i, y, c, corTexto, corFundo)
 	}
 }
 

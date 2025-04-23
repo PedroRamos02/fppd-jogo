@@ -16,6 +16,7 @@ func main() {
 	}
 
 	jogo := jogoNovo()
+	iniciarTimerVisual(&jogo)
 	if err := jogoCarregarMapa(mapaFile, &jogo); err != nil {
 		panic(err)
 	}
