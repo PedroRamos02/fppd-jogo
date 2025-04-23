@@ -1,44 +1,49 @@
-// jogo.go - Funções para manipular os elementos do jogo, como carregar o mapa e mover o personagem
 package main
 
 import (
 	"bufio"
 	"os"
+	"time"
 )
 
-// Elemento representa qualquer objeto do mapa (parede, personagem, vegetação, etc)
 type Elemento struct {
 	simbolo   rune
 	cor       Cor
 	corFundo  Cor
-	tangivel  bool // Indica se o elemento bloqueia passagem
+	tangivel  bool
 }
 
-// Jogo contém o estado atual do jogo
+type InimigoMovel struct {
+	X, Y     int
+	Direita  bool
+}
+
+type Tiro struct {
+	X, Y int
+}
+
 type Jogo struct {
-	Mapa            [][]Elemento // grade 2D representando o mapa
-	PosX, PosY      int          // posição atual do personagem
-	UltimoVisitado  Elemento     // elemento que estava na posição do personagem antes de mover
-	StatusMsg       string       // mensagem para a barra de status
+	Mapa           [][]Elemento
+	PosX, PosY     int
+	UltimoVisitado Elemento
+	StatusMsg      string
+	Inimigos       []InimigoMovel
+	Tiros          []Tiro
 }
 
-// Elementos visuais do jogo
 var (
 	Personagem = Elemento{'☺', CorCinzaEscuro, CorPadrao, true}
 	Inimigo    = Elemento{'☠', CorVermelho, CorPadrao, true}
 	Parede     = Elemento{'▤', CorParede, CorFundoParede, true}
 	Vegetacao  = Elemento{'♣', CorVerde, CorPadrao, false}
 	Vazio      = Elemento{' ', CorPadrao, CorPadrao, false}
+	Projeteis  = Elemento{'*', CorVerde, CorPadrao, false}
 )
 
-// Cria e retorna uma nova instância do jogo
 func jogoNovo() Jogo {
-	// O ultimo elemento visitado é inicializado como vazio
-	// pois o jogo começa com o personagem em uma posição vazia
 	return Jogo{UltimoVisitado: Vazio}
 }
 
-// Lê um arquivo texto linha por linha e constrói o mapa do jogo
 func jogoCarregarMapa(nome string, jogo *Jogo) error {
 	arq, err := os.Open(nome)
 	if err != nil {
@@ -57,11 +62,14 @@ func jogoCarregarMapa(nome string, jogo *Jogo) error {
 			case Parede.simbolo:
 				e = Parede
 			case Inimigo.simbolo:
-				e = Inimigo
+				jogo.Inimigos = append(jogo.Inimigos, InimigoMovel{
+					X: x, Y: y, Direita: true,
+				})
+				e = Vazio
 			case Vegetacao.simbolo:
 				e = Vegetacao
 			case Personagem.simbolo:
-				jogo.PosX, jogo.PosY = x, y // registra a posição inicial do personagem
+				jogo.PosX, jogo.PosY = x, y
 			}
 			linhaElems = append(linhaElems, e)
 		}
@@ -74,35 +82,67 @@ func jogoCarregarMapa(nome string, jogo *Jogo) error {
 	return nil
 }
 
-// Verifica se o personagem pode se mover para a posição (x, y)
 func jogoPodeMoverPara(jogo *Jogo, x, y int) bool {
-	// Verifica se a coordenada Y está dentro dos limites verticais do mapa
 	if y < 0 || y >= len(jogo.Mapa) {
 		return false
 	}
-
-	// Verifica se a coordenada X está dentro dos limites horizontais do mapa
 	if x < 0 || x >= len(jogo.Mapa[y]) {
 		return false
 	}
-
-	// Verifica se o elemento de destino é tangível (bloqueia passagem)
 	if jogo.Mapa[y][x].tangivel {
 		return false
 	}
-
-	// Pode mover para a posição
 	return true
 }
 
-// Move um elemento para a nova posição
 func jogoMoverElemento(jogo *Jogo, x, y, dx, dy int) {
 	nx, ny := x+dx, y+dy
+	elemento := jogo.Mapa[y][x]
+	jogo.Mapa[y][x] = jogo.UltimoVisitado
+	jogo.UltimoVisitado = jogo.Mapa[ny][nx]
+	jogo.Mapa[ny][nx] = elemento
+}
 
-	// Obtem elemento atual na posição
-	elemento := jogo.Mapa[y][x] // guarda o conteúdo atual da posição
+func moverInimigo(inimigo *InimigoMovel, jogo *Jogo) {
+	dx := 1
+	if !inimigo.Direita {
+		dx = -1
+	}
+	nx := inimigo.X + dx
+	ny := inimigo.Y
 
-	jogo.Mapa[y][x] = jogo.UltimoVisitado     // restaura o conteúdo anterior
-	jogo.UltimoVisitado = jogo.Mapa[ny][nx]   // guarda o conteúdo atual da nova posição
-	jogo.Mapa[ny][nx] = elemento              // move o elemento
+	if nx < 0 || nx >= len(jogo.Mapa[0]) {
+		inimigo.Direita = !inimigo.Direita
+		return
+	}
+	destino := jogo.Mapa[ny][nx]
+	if destino.tangivel || (jogo.PosX == nx && jogo.PosY == ny) {
+		inimigo.Direita = !inimigo.Direita
+		return
+	}
+
+	jogo.Mapa[inimigo.Y][inimigo.X] = Vazio
+	jogo.Mapa[ny][nx] = Inimigo
+	inimigo.X = nx
+	inimigo.Y = ny
+}
+
+func atirar(jogo *Jogo) {
+	tiro := Tiro{X: jogo.PosX, Y: jogo.PosY - 1}
+	jogo.Tiros = append(jogo.Tiros, tiro)
+	go func() {
+		for {
+			if tiro.Y < 0 || tiro.Y >= len(jogo.Mapa) {
+				return
+			}
+			if jogo.Mapa[tiro.Y][tiro.X].tangivel {
+				return
+			}
+			jogo.Mapa[tiro.Y][tiro.X] = Projeteis
+			interfaceDesenharJogo(jogo)
+			time.Sleep(100 * time.Millisecond)
+			jogo.Mapa[tiro.Y][tiro.X] = Vazio
+			tiro.Y--
+		}
+	}()
 }

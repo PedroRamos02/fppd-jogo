@@ -41,6 +41,8 @@ func personagemExecutarAcao(ev EventoTeclado, jogo *Jogo) bool {
 	case "mover":
 		// Move o personagem com base na tecla
 		personagemMover(ev.Tecla, jogo)
+	case "atirar":
+		atirar(jogo)
 	}
 	return true // Continua o jogo
 }

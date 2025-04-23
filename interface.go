@@ -50,11 +50,14 @@ func interfaceLerEventoTeclado() EventoTeclado {
 	if ev.Key == termbox.KeyEsc {
 		return EventoTeclado{Tipo: "sair"}
 	}
+	if ev.Key == termbox.KeyEnter {
+		return EventoTeclado{Tipo: "atirar"}
+	}
 	if ev.Ch == 'e' {
 		return EventoTeclado{Tipo: "interagir"}
 	}
 	return EventoTeclado{Tipo: "mover", Tecla: ev.Ch}
-}
+} 
 
 // Renderiza todo o estado atual do jogo na tela
 func interfaceDesenharJogo(jogo *Jogo) {
@@ -73,6 +76,9 @@ func interfaceDesenharJogo(jogo *Jogo) {
 	// Desenha a barra de status
 	interfaceDesenharBarraDeStatus(jogo)
 
+	for _, inimigo := range jogo.Inimigos {
+		interfaceDesenharElemento(inimigo.X, inimigo.Y, Inimigo)
+	}
 	// Força a atualização do terminal
 	interfaceAtualizarTela()
 }
