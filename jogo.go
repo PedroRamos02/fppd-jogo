@@ -17,6 +17,7 @@ type InimigoMovel struct {
 	X, Y     int
 	Direita  bool
 	Ativo    bool
+	Cor      Cor  // Cor agora pertence ao inimigo
 }
 
 type Tiro struct {
@@ -64,9 +65,9 @@ func jogoCarregarMapa(nome string, jogo *Jogo) error {
 				e = Parede
 			case Inimigo.simbolo:
 				jogo.Inimigos = append(jogo.Inimigos, InimigoMovel{
-					X: x, Y: y, Direita: true, Ativo: true, // Ativo inicializado como true
+					X: x, Y: y, Direita: true, Ativo: true, Cor: CorVermelho, // Inicializa com a cor vermelha
 				})
-				e = Vazio			
+				e = Vazio
 			case Vegetacao.simbolo:
 				e = Vegetacao
 			case Personagem.simbolo:
@@ -146,7 +147,6 @@ func moverInimigo(inimigo *InimigoMovel, jogo *Jogo) {
 	inimigo.Y = ny
 }
 
-
 func atirar(jogo *Jogo) {
 	tiro := Tiro{X: jogo.PosX, Y: jogo.PosY - 1}
 	jogo.Tiros = append(jogo.Tiros, tiro)
@@ -161,7 +161,14 @@ func atirar(jogo *Jogo) {
 			for i := range jogo.Inimigos {
 				if jogo.Inimigos[i].X == tiro.X && jogo.Inimigos[i].Y == tiro.Y && jogo.Inimigos[i].Ativo {
 					jogo.Inimigos[i].Ativo = false
-					jogo.Mapa[tiro.Y][tiro.X] = Vazio // Remover do mapa imediatamente
+					jogo.Inimigos[i].Cor = CorCinzaEscuro // Muda a cor do inimigo para preto
+
+					// Atualiza o inimigo no mapa
+					jogo.Mapa[jogo.Inimigos[i].Y][jogo.Inimigos[i].X].cor = CorCinzaEscuro
+
+					// Remove o tiro do mapa
+					jogo.Mapa[tiro.Y][tiro.X] = Vazio
+
 					interfaceDesenharJogo(jogo)
 					verificarVitoria(jogo)
 					return
@@ -185,4 +192,3 @@ func atirar(jogo *Jogo) {
 		}
 	}()
 }
-
